@@ -17,3 +17,13 @@ feeds:
     name: Lobsters
     max_items: 15
     full_text: true
+
+  - url: https://www.christianitytoday.com/feed/
+    name: Christianity Today
+    max_items: 15
+    full_text: true
+
+  - url: https://sportrxiv.org/index.php/server/gateway/plugin/WebFeedGatewayPlugin/rss2
+    name: SportRxiv
+    max_items: 15
+    full_text: false     # abstracts are already in the feed; scraping the OJS page would give a PDF-download stub
