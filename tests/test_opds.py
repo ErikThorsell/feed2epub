@@ -64,5 +64,6 @@ def test_build_catalog_is_valid_opds_acquisition_feed(tmp_path: Path) -> None:
     assert acquisition is not None
     assert acquisition.get("rel") == "http://opds-spec.org/acquisition"
     assert acquisition.get("type") == "application/epub+zip"
-    # Relative href so it resolves against whatever host/port the catalog is served from.
-    assert acquisition.get("href") == "hacker-news-2026-07-11.epub"
+    # Root-relative href: CrossPoint appends a document-relative href to the catalog path (/catalog.xml/foo.epub)
+    # instead of replacing the last segment, so it must be rooted at the site to resolve correctly.
+    assert acquisition.get("href") == "/hacker-news-2026-07-11.epub"

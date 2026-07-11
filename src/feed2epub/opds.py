@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from ebooklib import epub
 
@@ -108,9 +109,16 @@ def build_catalog(
     updated: datetime,
     feed_id: str = "urn:feed2epub:catalog",
     feed_title: str = "feed2epub",
-    self_href: str = "catalog.xml",
+    self_href: str = "/catalog.xml",
 ) -> str:
-    """Render ``publications`` as an OPDS acquisition feed. Acquisition hrefs are relative to the catalog's own URL."""
+    """Render ``publications`` as an OPDS acquisition feed.
+
+    Hrefs are root-relative (``/<file>.epub``), not document-relative. CrossPoint (Xteink X4) resolves a
+    document-relative acquisition href like ``foo.epub`` by *appending* it to the catalog path -- it fetches
+    ``/catalog.xml/foo.epub`` and 404s instead of replacing the last segment per RFC 3986. A root-relative href
+    ignores the catalog's own path, so it works on that client and stays correct on conformant ones. This assumes
+    the catalog is served at the site root (the deployment fronts it at its own host), which it is.
+    """
     feed = ET.Element(f"{{{_ATOM}}}feed")
     _text(feed, f"{{{_ATOM}}}id", feed_id)
     _text(feed, f"{{{_ATOM}}}title", feed_title)
@@ -126,7 +134,7 @@ def build_catalog(
         author = ET.SubElement(entry, f"{{{_ATOM}}}author")
         _text(author, f"{{{_ATOM}}}name", pub.author)
         _text(entry, f"{{{_DCTERMS}}}language", pub.language)
-        _link(entry, rel=_ACQUISITION_REL, href=pub.filename, mime=_EPUB_TYPE)
+        _link(entry, rel=_ACQUISITION_REL, href=f"/{quote(pub.filename)}", mime=_EPUB_TYPE)
 
     ET.indent(feed)
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(feed, encoding="unicode")
