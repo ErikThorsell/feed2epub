@@ -1,0 +1,61 @@
+# feed2epub -- daily RSS/Atom -> EPUB fetcher plus an OPDS server for the Xteink X4.
+#
+# Deployment model: Reverse Proxy in front of Docker Compose deployment.
+#
+# First-time host setup (the bind-mounted library must be writable by uid 1000):
+#   sudo mkdir -p /mnt/container_volumes/feed2epub/library \
+#     && sudo chown -R 1000:1000 /mnt/container_volumes/feed2epub
+
+x-feed2epub: &feed2epub
+  build: .
+  image: feed2epub:local
+  user: "1000:1000"
+  environment:
+    - TZ=Europe/Stockholm
+  volumes:
+    - ./feeds.yaml:/config/feeds.yaml:ro
+    - /mnt/container_volumes/feed2epub/library:/library
+
+services:
+  # OPDS server. Point the reverse proxy at http://<this-host>:8095.
+  server:
+    <<: *feed2epub
+    container_name: feed2epub-server
+    command:
+      ["python", "-m", "feed2epub.serve", "--config", "/config/feeds.yaml", "--host", "0.0.0.0", "--port", "8080"]
+    ports:
+      - "8095:8080"
+    restart: unless-stopped
+    networks:
+      feed2epub:
+        ipv4_address: 172.16.238.2
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/catalog.xml')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Daily fetch. The app is a pure one-shot (per project non-goals: no scheduler inside the app); the schedule
+  # here is just a shell sleep-loop -- it runs once on start, then every FETCH_INTERVAL seconds.
+  # Run one now by hand: docker compose run --rm fetcher python -m feed2epub --config /config/feeds.yaml
+  fetcher:
+    <<: *feed2epub
+    container_name: feed2epub-fetcher
+    environment:
+      - TZ=Europe/Stockholm
+      - FETCH_INTERVAL=86400
+    command:
+      - /bin/sh
+      - -c
+      - 'while true; do python -m feed2epub --config /config/feeds.yaml || true; sleep "${FETCH_INTERVAL:-86400}"; done'
+    restart: unless-stopped
+    networks:
+      feed2epub:
+        ipv4_address: 172.16.238.3
+
+networks:
+  feed2epub:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/28

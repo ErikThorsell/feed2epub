@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Environments / tooling caches
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Build artefacts / output
+*.epub

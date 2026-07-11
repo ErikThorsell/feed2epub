@@ -1,0 +1,19 @@
+# feed2epub configuration. Mounted read-only into the container at /config/feeds.yaml.
+# Edit this file and `docker compose restart fetcher` (or wait for the next daily run) to pick up changes.
+
+output_dir: /library      # inside the container; bind-mounted to /mnt/container_volumes/feed2epub/library
+retention_days: 3         # keep N days of daily EPUBs, then prune by filename date
+max_age_hours: 72         # skip entries older than this; generous so a full front page of 15 survives the filter
+request_timeout: 20
+user_agent: "feed2epub/1.0 (+https://wirsenius.se)"
+
+feeds:
+  - url: https://news.ycombinator.com/rss
+    name: Hacker News
+    max_items: 15
+    full_text: true       # fetch each linked article and extract its body; false = use the feed summary verbatim
+
+  - url: https://lobste.rs/rss
+    name: Lobsters
+    max_items: 15
+    full_text: true

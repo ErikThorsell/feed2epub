@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Example Feed</title>
+    <link>https://example.com/</link>
+    <description>Captured sample, truncated.</description>
+    <language>en-us</language>
+    <item>
+      <title>Fresh article A</title>
+      <link>https://example.com/a</link>
+      <guid isPermaLink="false">guid-a</guid>
+      <pubDate>Fri, 10 Jul 2026 08:00:00 GMT</pubDate>
+      <description>Summary of A with an &lt;b&gt;emphasis&lt;/b&gt; and an &lt;img src="x.png"&gt; image.</description>
+    </item>
+    <item>
+      <title>Old article B</title>
+      <link>https://example.com/b</link>
+      <guid isPermaLink="false">guid-b</guid>
+      <pubDate>Wed, 01 Jul 2026 08:00:00 GMT</pubDate>
+      <description>Too old, should be filtered out.</description>
+    </item>
+    <item>
+      <title>Duplicate of A</title>
+      <link>https://example.com/a-again</link>
+      <guid isPermaLink="false">guid-a</guid>
+      <pubDate>Fri, 10 Jul 2026 09:00:00 GMT</pubDate>
+      <description>Same guid as A, should be deduped.</description>
+    </item>
+    <item>
+      <title>Fresh article D</title>
+      <link>https://example.com/d</link>
+      <guid isPermaLink="false">guid-d</guid>
+      <pubDate>Thu, 09 Jul 2026 06:00:00 GMT</pubDate>
+      <description>Within the age window.</description>
+    </item>
+  </channel>
+</rss>

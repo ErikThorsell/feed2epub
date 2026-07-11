@@ -1,0 +1,50 @@
+[project]
+name = "feed2epub"
+version = "1.0.0"
+description = "Turn RSS/Atom feeds into daily EPUBs, one EPUB per feed, one chapter per article."
+requires-python = ">=3.12"
+dependencies = [
+    "feedparser>=6.0",
+    "trafilatura>=1.8",
+    "ebooklib>=0.18",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "structlog>=24.1",
+    "lxml>=5.0",
+]
+
+[project.scripts]
+feed2epub = "feed2epub.__main__:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "mypy>=1.10",
+    "ruff>=0.5",
+    "types-pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/feed2epub"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["feedparser", "trafilatura", "ebooklib", "ebooklib.*", "lxml", "lxml.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>On Small E-Readers and Server-Side Rendering</title>
+  <style>.headline { color: rebeccapurple; font-size: 3em; }</style>
+  <script>window.dataLayer = window.dataLayer || []; track('pageview');</script>
+</head>
+<body>
+  <nav class="site-nav"><a href="/">Home</a> <a href="/about">About</a></nav>
+  <header><img src="/logo.png" alt="logo" class="logo"></header>
+  <article>
+    <h1 class="headline">On Small E-Readers and Server-Side Rendering</h1>
+    <p class="byline" style="color:gray">By A. Writer, 2026-07-10</p>
+    <p>Constrained devices force clarity. When a reader has a few hundred kilobytes of RAM, the only sane place to
+       do the heavy lifting is on a server that has none of those constraints. This is not a limitation so much as
+       a healthy separation of concerns between production and consumption.</p>
+    <figure>
+      <img src="/diagram.png" alt="architecture diagram">
+      <figcaption>Figure 1: the pipeline.</figcaption>
+    </figure>
+    <h2>Why one document per feed</h2>
+    <p>A flat folder browser makes dozens of tiny files unusable. Grouping a run's articles into a single document,
+       one chapter each, matches how the device actually presents a library to the reader.</p>
+    <ul>
+      <li>Each article becomes a chapter.</li>
+      <li>Images are stripped; the screen is monochrome.</li>
+      <li>Styling is dropped so the reader's typography wins.</li>
+    </ul>
+    <blockquote>The device is a dumb consumer, and that is the entire point.</blockquote>
+    <p>Extraction is the hard part: paywalls, JavaScript-only pages, and boilerplate all conspire against a clean
+       body. A good extractor earns its keep here.</p>
+  </article>
+  <footer class="site-footer"><p>Copyright 2026. Follow us on the socials.</p></footer>
+</body>
+</html>
