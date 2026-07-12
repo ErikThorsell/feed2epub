@@ -26,9 +26,6 @@ services:
     ports:
       - "8095:8080"
     restart: unless-stopped
-    networks:
-      feed2epub:
-        ipv4_address: 172.16.238.2
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/catalog.xml')"]
       interval: 30s
@@ -49,13 +46,3 @@ services:
       - -c
       - 'while true; do python -m feed2epub --config /config/feeds.yaml || true; sleep "${FETCH_INTERVAL:-86400}"; done'
     restart: unless-stopped
-    networks:
-      feed2epub:
-        ipv4_address: 172.16.238.3
-
-networks:
-  feed2epub:
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.16.238.0/28
