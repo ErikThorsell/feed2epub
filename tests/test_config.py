@@ -40,6 +40,35 @@ def test_load_valid_config_with_defaults(tmp_path: Path) -> None:
     assert cfg.feeds[1].full_text is False
 
 
+def test_group_is_optional_and_parsed(tmp_path: Path) -> None:
+    cfg = load_config(
+        _write(
+            tmp_path,
+            """
+            output_dir: /library
+            feeds:
+              - url: https://a.example/rss
+                name: Grouped
+                group: Wikipedia
+              - url: https://b.example/rss
+                name: Ungrouped
+            """,
+        )
+    )
+    assert cfg.feeds[0].group == "Wikipedia"
+    assert cfg.feeds[1].group is None
+
+
+def test_empty_group_raises(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError):
+        load_config(
+            _write(
+                tmp_path,
+                "output_dir: /library\nfeeds:\n  - url: https://a/rss\n    name: A\n    group: '   '\n",
+            )
+        )
+
+
 def test_missing_output_dir_raises(tmp_path: Path) -> None:
     with pytest.raises(ConfigError):
         load_config(_write(tmp_path, "feeds:\n  - url: https://a.example/rss\n    name: A\n"))

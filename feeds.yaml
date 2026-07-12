@@ -27,3 +27,14 @@ feeds:
     name: SportRxiv
     max_items: 15
     full_text: false     # abstracts are already in the feed; scraping the OJS page would give a PDF-download stub
+
+  # Feeds sharing a `group` are merged into one EPUB named after the group (here: wikipedia-<date>.epub),
+  # in the order they appear below. Feeds without a `group` still get their own EPUB, as above.
+  - url: https://en.wikipedia.org/w/api.php?action=featuredfeed&feed=featured&feedformat=atom
+    name: Wikipedia Featured Article
+    group: Wikipedia
+    full_text: false     # the feed entry already carries a ~3.5k-char article extract
+  - url: https://en.wikipedia.org/w/api.php?action=featuredfeed&feed=onthisday&feedformat=atom
+    name: Wikipedia On This Day
+    group: Wikipedia
+    full_text: false

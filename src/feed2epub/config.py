@@ -32,6 +32,8 @@ class FeedConfig:
     name: str
     max_items: int
     full_text: bool
+    group: str | None
+    """If set, this feed's articles are merged into a shared EPUB named after the group instead of its own."""
 
 
 @dataclass(frozen=True)
@@ -56,6 +58,15 @@ def _require_str(mapping: dict[str, Any], key: str, what: str) -> str:
     value = mapping.get(key)
     if not isinstance(value, str) or not value.strip():
         raise ConfigError(f"{what}: '{key}' is required and must be a non-empty string")
+    return value.strip()
+
+
+def _optional_str(mapping: dict[str, Any], key: str, what: str) -> str | None:
+    if key not in mapping or mapping[key] is None:
+        return None
+    value = mapping[key]
+    if not isinstance(value, str) or not value.strip():
+        raise ConfigError(f"{what}: '{key}' must be a non-empty string when set")
     return value.strip()
 
 
@@ -85,6 +96,7 @@ def _parse_feed(raw: Any, index: int, defaults: dict[str, Any]) -> FeedConfig:
         name=_require_str(mapping, "name", what),
         max_items=_positive_int(mapping, "max_items", defaults["max_items"], what),
         full_text=_bool(mapping, "full_text", defaults["full_text"], what),
+        group=_optional_str(mapping, "group", what),
     )
 
 

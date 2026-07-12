@@ -1,8 +1,9 @@
-"""Entrypoint: load config, build one EPUB per feed, write them to the output dir.
+"""Entrypoint: load config, collect each feed, group them into EPUBs, write them to the output dir.
 
-Resilience contract: a single failing entry must not fail its feed, and a single failing feed must not fail the
-run. The process exits non-zero only if *every* feed failed. After a non-total-failure run, old EPUBs are pruned
-from ``output_dir`` (see :mod:`feed2epub.retention`). Serving is intentionally out of scope here.
+By default each feed becomes its own EPUB; feeds sharing a ``group`` are merged into one (see
+:mod:`feed2epub.grouping`). Resilience contract: a single failing entry must not fail its feed, and a single failing
+feed must not fail the run. The process exits non-zero only if *every* feed failed. After a non-total-failure run,
+old EPUBs are pruned from ``output_dir`` (see :mod:`feed2epub.retention`). Serving is intentionally out of scope here.
 """
 
 from __future__ import annotations
@@ -15,9 +16,10 @@ import httpx
 import structlog
 
 from .config import AppConfig, ConfigError, FeedConfig, load_config
-from .epub import Article, build_book, slugify, write_book
+from .epub import Article, build_book, write_book
 from .extract import extract_article, fetch_html, make_client, sanitize_html
-from .feeds import Entry, parse_entries
+from .feeds import Entry, FeedMeta, parse_entries
+from .grouping import find_slug_collisions, plan_books
 from .retention import prune
 
 log = structlog.get_logger()
@@ -57,20 +59,22 @@ def _article_from_entry(entry: Entry, feed_cfg: FeedConfig, client: httpx.Client
     )
 
 
-def _process_feed(feed_cfg: FeedConfig, cfg: AppConfig, client: httpx.Client, date_str: str, now: datetime) -> bool:
-    """Build and write one feed's EPUB. Returns ``True`` if the feed *failed* (fetch/parse/write error)."""
+def _collect_feed(
+    feed_cfg: FeedConfig, cfg: AppConfig, client: httpx.Client, now: datetime
+) -> tuple[FeedMeta, list[Article]] | None:
+    """Fetch, parse, and extract one feed's articles. Returns ``None`` on a fetch/parse failure (the feed's fault)."""
     counts = {"entries_seen": 0, "entries_written": 0, "entries_failed": 0}
 
     raw = fetch_html(client, feed_cfg.url)
     if raw is None:
         log.warning("feed.fetch_failed", feed=feed_cfg.name, url=feed_cfg.url, **counts)
-        return True
+        return None
 
     try:
         meta, entries = parse_entries(raw, feed_cfg, now=now, max_age_hours=cfg.max_age_hours)
     except Exception as exc:  # a malformed feed must not crash the run
         log.warning("feed.parse_failed", feed=feed_cfg.name, error=str(exc), **counts)
-        return True
+        return None
 
     counts["entries_seen"] = len(entries)
     articles: list[Article] = []
@@ -86,20 +90,8 @@ def _process_feed(feed_cfg: FeedConfig, cfg: AppConfig, client: httpx.Client, da
         articles.append(article)
         counts["entries_written"] += 1
 
-    if not articles:
-        log.info("feed.no_articles", feed=feed_cfg.name, **counts)
-        return False
-
-    book = build_book(meta.title, date_str, meta.language, articles)
-    out_path = cfg.output_dir / f"{slugify(feed_cfg.name)}-{date_str}.epub"
-    try:
-        write_book(book, out_path)
-    except OSError as exc:
-        log.error("feed.write_failed", feed=feed_cfg.name, path=str(out_path), error=str(exc), **counts)
-        return True
-
-    log.info("feed.done", feed=feed_cfg.name, path=str(out_path), **counts)
-    return False
+    log.info("feed.collected", feed=feed_cfg.name, group=feed_cfg.group, **counts)
+    return meta, articles
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -118,11 +110,35 @@ def main(argv: list[str] | None = None) -> int:
     now = datetime.now(UTC)
     date_str = now.strftime("%Y-%m-%d")
 
+    for slug in find_slug_collisions(cfg.feeds):
+        log.warning("config.slug_collision", slug=slug)
+
+    # Phase 1: collect every feed's articles (network I/O). A fetch/parse failure is the feed's own failure.
+    collected: list[tuple[FeedConfig, FeedMeta, list[Article]]] = []
     failed = 0
     with make_client(cfg.user_agent, cfg.request_timeout) as client:
         for feed_cfg in cfg.feeds:
-            if _process_feed(feed_cfg, cfg, client, date_str, now):
+            feed_result = _collect_feed(feed_cfg, cfg, client, now)
+            if feed_result is None:
                 failed += 1
+                continue
+            meta, articles = feed_result
+            collected.append((feed_cfg, meta, articles))
+
+    # Phase 2: group into books and write one EPUB per plan. A write failure fails every feed that fed that book.
+    for plan in plan_books(collected):
+        if not plan.articles:
+            log.info("book.no_articles", book=plan.slug, feeds=plan.feeds)
+            continue
+        book = build_book(plan.title, date_str, plan.language, plan.articles)
+        out_path = cfg.output_dir / f"{plan.slug}-{date_str}.epub"
+        try:
+            write_book(book, out_path)
+        except OSError as exc:
+            log.error("book.write_failed", book=plan.slug, path=str(out_path), feeds=plan.feeds, error=str(exc))
+            failed += len(plan.feeds)
+            continue
+        log.info("book.done", book=plan.slug, path=str(out_path), feeds=plan.feeds, articles=len(plan.articles))
 
     total = len(cfg.feeds)
     run_failed = total > 0 and failed == total
