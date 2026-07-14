@@ -8,6 +8,17 @@ request_timeout: 20
 user_agent: "feed2epub/1.0 (+https://wirsenius.se)"
 
 feeds:
+  # Your Instapaper unread queue as one to-read EPUB (one chapter per saved article). Save an article to Instapaper
+  # from any device (share sheet, browser extension, save-by-email) and it lands here on the next fetch -- nothing of
+  # this service has to be exposed; feed2epub reaches out to Instapaper. The RSS URL carries a secret token, so it
+  # lives in .env as ${INSTAPAPER_FEED_URL} (see .env.example), not in this tracked file.
+  - url: ${INSTAPAPER_FEED_URL}
+    name: Instapaper
+    group: Instapaper     # one-feed group: titles/slugs the book "Instapaper" instead of the feed's own
+                          # "Instapaper: Unread". Add more feeds to this group later to merge them into this book.
+    full_text: true       # the Instapaper feed carries only a truncated excerpt; re-fetch each article's real body
+    max_age_hours: 4320   # 180 days: a reading pile, not a daily feed. Instapaper itself drops items once archived.
+
   - url: https://news.ycombinator.com/rss
     name: Hacker News
     max_items: 15

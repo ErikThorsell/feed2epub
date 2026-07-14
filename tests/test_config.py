@@ -40,6 +40,59 @@ def test_load_valid_config_with_defaults(tmp_path: Path) -> None:
     assert cfg.feeds[1].full_text is False
 
 
+def test_max_age_hours_per_feed_override_and_inheritance(tmp_path: Path) -> None:
+    cfg = load_config(
+        _write(
+            tmp_path,
+            """
+            output_dir: /library
+            max_age_hours: 48
+            feeds:
+              - url: https://curated.example/rss
+                name: Curated
+                max_age_hours: 4320
+              - url: https://news.example/rss
+                name: News
+            """,
+        )
+    )
+    assert cfg.max_age_hours == 48
+    assert cfg.feeds[0].max_age_hours == 4320  # per-feed override
+    assert cfg.feeds[1].max_age_hours == 48  # inherits the top-level default
+
+
+def test_url_env_var_is_expanded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SECRET_FEED", "https://secret.example/rss/tok3n")
+    cfg = load_config(
+        _write(
+            tmp_path,
+            """
+            output_dir: /library
+            feeds:
+              - url: ${SECRET_FEED}
+                name: Curated
+            """,
+        )
+    )
+    assert cfg.feeds[0].url == "https://secret.example/rss/tok3n"
+
+
+def test_unset_env_var_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MISSING_FEED", raising=False)
+    with pytest.raises(ConfigError):
+        load_config(
+            _write(
+                tmp_path,
+                """
+                output_dir: /library
+                feeds:
+                  - url: ${MISSING_FEED}
+                    name: Curated
+                """,
+            )
+        )
+
+
 def test_group_is_optional_and_parsed(tmp_path: Path) -> None:
     cfg = load_config(
         _write(

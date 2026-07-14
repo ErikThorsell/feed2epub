@@ -15,7 +15,7 @@ from pathlib import Path
 import httpx
 import structlog
 
-from .config import AppConfig, ConfigError, FeedConfig, load_config
+from .config import ConfigError, FeedConfig, load_config
 from .epub import Article, build_book, write_book
 from .extract import extract_article, fetch_html, make_client, sanitize_html
 from .feeds import Entry, FeedMeta, parse_entries
@@ -60,7 +60,7 @@ def _article_from_entry(entry: Entry, feed_cfg: FeedConfig, client: httpx.Client
 
 
 def _collect_feed(
-    feed_cfg: FeedConfig, cfg: AppConfig, client: httpx.Client, now: datetime
+    feed_cfg: FeedConfig, client: httpx.Client, now: datetime
 ) -> tuple[FeedMeta, list[Article]] | None:
     """Fetch, parse, and extract one feed's articles. Returns ``None`` on a fetch/parse failure (the feed's fault)."""
     counts = {"entries_seen": 0, "entries_written": 0, "entries_failed": 0}
@@ -71,7 +71,7 @@ def _collect_feed(
         return None
 
     try:
-        meta, entries = parse_entries(raw, feed_cfg, now=now, max_age_hours=cfg.max_age_hours)
+        meta, entries = parse_entries(raw, feed_cfg, now=now, max_age_hours=feed_cfg.max_age_hours)
     except Exception as exc:  # a malformed feed must not crash the run
         log.warning("feed.parse_failed", feed=feed_cfg.name, error=str(exc), **counts)
         return None
@@ -118,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
     failed = 0
     with make_client(cfg.user_agent, cfg.request_timeout) as client:
         for feed_cfg in cfg.feeds:
-            feed_result = _collect_feed(feed_cfg, cfg, client, now)
+            feed_result = _collect_feed(feed_cfg, client, now)
             if feed_result is None:
                 failed += 1
                 continue

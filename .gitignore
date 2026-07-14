@@ -13,3 +13,6 @@ build/
 
 # Build artefacts / output
 *.epub
+
+# Local secrets (Instapaper RSS token etc.); .env.example is committed as the template.
+.env

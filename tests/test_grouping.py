@@ -7,7 +7,7 @@ from feed2epub.grouping import find_slug_collisions, plan_books
 
 
 def _feed(name: str, group: str | None = None) -> FeedConfig:
-    return FeedConfig(url=f"https://ex/{name}", name=name, max_items=25, full_text=False, group=group)
+    return FeedConfig(url=f"https://ex/{name}", name=name, max_items=25, full_text=False, max_age_hours=36, group=group)
 
 
 def _meta(title: str, language: str = "en") -> FeedMeta:

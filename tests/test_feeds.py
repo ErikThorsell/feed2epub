@@ -11,7 +11,9 @@ NOW = datetime(2026, 7, 10, 12, 0, 0, tzinfo=UTC)
 
 
 def _cfg(max_items: int = 25) -> FeedConfig:
-    return FeedConfig(url="https://example.com/rss", name="Example", max_items=max_items, full_text=True, group=None)
+    return FeedConfig(
+        url="https://example.com/rss", name="Example", max_items=max_items, full_text=True, max_age_hours=36, group=None
+    )
 
 
 def test_age_filter_and_dedupe() -> None:
