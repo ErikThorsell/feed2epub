@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from feed2epub.extract import extract_article, sanitize_html
+from feed2epub.extract import _inline_pre_to_code, extract_article, sanitize_html
 
 ARTICLE = Path(__file__).parent / "fixtures" / "article.html"
 
@@ -43,6 +43,22 @@ def test_sanitize_empty_input() -> None:
     assert sanitize_html("") == ""
     assert sanitize_html(None) == ""
     assert sanitize_html("   ") == ""
+
+
+def test_inline_pre_becomes_code_and_keeps_paragraph_intact() -> None:
+    # trafilatura mis-tags inline code as block-level <pre>; nested in a <p>, that block would force the paragraph
+    # closed when parsed and fragment the prose. Rewritten to <code> first, the paragraph survives sanitisation.
+    raw = "<p>Run <pre>git rebase -i</pre> to edit history.</p>"
+    out = sanitize_html(_inline_pre_to_code(raw))
+    assert out == "<p>Run <code>git rebase -i</code> to edit history.</p>"
+
+
+def test_multiline_pre_block_is_preserved() -> None:
+    raw = "<p>Example:</p><pre>def f():\n    return 1</pre>"
+    fixed = _inline_pre_to_code(raw)
+    # A genuine multi-line block keeps its <pre> tag (only single-line inline <pre> is rewritten).
+    assert "<pre>def f():\n    return 1</pre>" in fixed
+    assert "<code>" not in fixed
 
 
 def test_extract_article_produces_clean_body() -> None:

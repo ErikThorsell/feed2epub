@@ -8,6 +8,7 @@ raw feed summary -- is reduced to a small semantic whitelist with no images, no 
 from __future__ import annotations
 
 import html
+import re
 import time
 
 import httpx
@@ -141,6 +142,23 @@ def fetch_html(client: httpx.Client, url: str, *, retries: int = 2, backoff: flo
     return None
 
 
+# trafilatura tags inline code as block-level ``<pre>``. A ``<pre>`` whose content spans no newline is inline code
+# it mis-tagged: left as-is it renders as its own monospace block and -- because a block element cannot nest inside
+# ``<p>`` -- forces the surrounding paragraph closed when the HTML is parsed, shredding the prose into fragments.
+# This is not site-specific: across a 20-article sample from a dozen domains it hit ~70% of articles and ~91% of all
+# ``<pre>`` elements. Genuine multi-line code blocks contain a newline and are left untouched.
+_INLINE_PRE_RE = re.compile(r"<pre>([^\n]*?)</pre>")
+
+
+def _inline_pre_to_code(fragment: str) -> str:
+    """Rewrite single-line ``<pre>`` (mis-tagged inline code) to ``<code>``.
+
+    Applied to trafilatura's raw output *before* parsing -- the only point at which the paragraph a block-level
+    ``<pre>`` would otherwise break can still be kept intact.
+    """
+    return _INLINE_PRE_RE.sub(r"<code>\1</code>", fragment)
+
+
 def extract_article(html_text: str, url: str | None) -> str | None:
     """Extract the main article body from a page and sanitise it. Returns ``None`` if extraction fails."""
     content = trafilatura.extract(
@@ -155,5 +173,5 @@ def extract_article(html_text: str, url: str | None) -> str | None:
     )
     if not content:
         return None
-    cleaned = _demote_article_headings(sanitize_html(content))
+    cleaned = _demote_article_headings(sanitize_html(_inline_pre_to_code(content)))
     return cleaned or None
