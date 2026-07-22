@@ -40,7 +40,7 @@ def test_scan_library_lists_only_our_books_newest_first(tmp_path: Path) -> None:
     pubs = scan_library(tmp_path)
 
     # Sorted by embedded date, newest first; the foreign book is absent despite its recent-looking filename.
-    assert [p.title for p in pubs] == ["LWN -- 2026-07-11", "Hacker News -- 2026-07-09"]
+    assert [p.title for p in pubs] == ["LWN", "Hacker News"]
     assert all(p.identifier.startswith("feed2epub:") for p in pubs)
     assert pubs[0].filename == "lwn-2026-07-11.epub"
 

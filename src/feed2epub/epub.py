@@ -54,12 +54,18 @@ def _chapter_body(article: Article) -> str:
 
 
 def build_book(feed_name: str, date_str: str, language: str, articles: list[Article]) -> epub.EpubBook:
-    """Build an :class:`EpubBook` titled ``<feed_name> -- <date_str>`` with one chapter per article."""
+    """Build an :class:`EpubBook` titled ``<feed_name>`` and authored ``<date_str>`` with one chapter per article.
+
+    The date lives in the author field, not the title, on purpose: CrossPoint (Xteink X4) names a downloaded
+    file ``<author> - <title>.epub`` and sorts its library by that name. Putting the date in the author makes the
+    on-device name ``<date> - <feed>.epub``, which sorts chronologically and drops the feed name it used to repeat
+    (when both title and author carried it, the name came out ``<feed> - <feed> -- <date>``).
+    """
     book = epub.EpubBook()
     book.set_identifier(f"feed2epub:{slugify(feed_name)}:{date_str}")
-    book.set_title(f"{feed_name} -- {date_str}")
+    book.set_title(feed_name)
     book.set_language(language or "en")
-    book.add_author(feed_name)
+    book.add_author(date_str)
 
     chapters: list[epub.EpubHtml] = []
     for index, article in enumerate(articles):

@@ -38,7 +38,7 @@ def test_build_and_reopen_epub_no_images(tmp_path: Path) -> None:
     assert not out.with_name(out.name + ".tmp").exists()  # temp file was renamed away
 
     reopened = epub.read_epub(str(out))
-    assert reopened.title == "Example Feed -- 2026-07-10"
+    assert reopened.title == "Example Feed"
 
     chapters = [i for i in reopened.get_items() if i.get_name().startswith("chap_")]
     assert len(chapters) == 2
