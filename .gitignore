@@ -16,3 +16,7 @@ build/
 
 # Local secrets (Instapaper RSS token etc.); .env.example is committed as the template.
 .env
+
+# Your own feed list, copied from feeds.example.yaml (any location: repo root, deployment/kubernetes/, ...).
+# It is deployment config, not part of the app -- keep it out of the image and out of Git.
+feeds.yaml

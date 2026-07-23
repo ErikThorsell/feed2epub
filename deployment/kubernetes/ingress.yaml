@@ -1,0 +1,21 @@
+# Generic Ingress example -- adapt host/TLS/ingressClassName to your controller. (On the homelab cluster this
+# is a Gateway API HTTPRoute instead; see that repo's manifests/feed2epub/.) Point your OPDS reader at
+# http(s)://<host>/catalog.xml.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: feed2epub
+  namespace: feed2epub
+spec:
+  # ingressClassName: nginx
+  rules:
+    - host: opds.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: feed2epub
+                port:
+                  number: 80

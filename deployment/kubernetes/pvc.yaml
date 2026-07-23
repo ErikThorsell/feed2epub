@@ -1,0 +1,14 @@
+# The shared library: the fetcher writes EPUBs here, the server reads them. A few MB of regenerable content
+# (retention_days in feeds.yaml caps it), so a small RWO block volume is plenty -- both containers live in one
+# pod (see deployment.yaml), so a single-node ReadWriteOnce claim is sufficient.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: feed2epub-library
+  namespace: feed2epub
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+  # storageClassName: <your block StorageClass>   # omit to use the cluster default

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: feed2epub
+  namespace: feed2epub
+spec:
+  selector:
+    app: feed2epub
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

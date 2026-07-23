@@ -9,5 +9,9 @@ tests
 *.epub
 mise.toml
 Dockerfile
-compose.yaml
+deployment
+.github
+*.example.yaml
+.env.example
+README.md
 .dockerignore

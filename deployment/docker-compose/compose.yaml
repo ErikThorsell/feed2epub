@@ -1,13 +1,22 @@
 # feed2epub -- daily RSS/Atom -> EPUB fetcher plus an OPDS server for the Xteink X4.
 #
-# Deployment model: Reverse Proxy in front of Docker Compose deployment.
+# Deployment model: Reverse Proxy in front of a Docker Compose deployment. (The other supported target is
+# Kubernetes -- see ../kubernetes/.) Paths below are relative to THIS file (deployment/docker-compose/), so
+# the build context and the app config resolve to the repo root two levels up.
 #
-# First-time host setup (the bind-mounted library must be writable by uid 1000):
-#   sudo mkdir -p /mnt/container_volumes/feed2epub/library \
-#     && sudo chown -R 1000:1000 /mnt/container_volumes/feed2epub
+# First-time setup:
+#   1. Config: from the repo root, `cp feeds.example.yaml feeds.yaml` and edit it (feeds.yaml is gitignored).
+#      Optional secret: `cp .env.example .env` and fill in INSTAPAPER_FEED_URL.
+#   2. The bind-mounted library must be writable by uid 1000:
+#        sudo mkdir -p /mnt/container_volumes/feed2epub/library \
+#          && sudo chown -R 1000:1000 /mnt/container_volumes/feed2epub
+#   3. From this directory: `docker compose up -d --build`
+#
+# Alternatively pull the published image instead of building: set `image: ghcr.io/erikthorsell/feed2epub:<tag>`
+# and drop the `build:` key.
 
 x-feed2epub: &feed2epub
-  build: .
+  build: ../..
   image: feed2epub:local
   user: "1000:1000"
   environment:
@@ -15,10 +24,10 @@ x-feed2epub: &feed2epub
   # Secrets referenced as ${VAR} in feeds.yaml (e.g. the private Instapaper RSS URL). Optional so the stack still
   # comes up without it; a feed whose ${VAR} is unset fails config-load. Copy .env.example to .env to populate.
   env_file:
-    - path: .env
+    - path: ../../.env
       required: false
   volumes:
-    - ./feeds.yaml:/config/feeds.yaml:ro
+    - ../../feeds.yaml:/config/feeds.yaml:ro
     - /mnt/container_volumes/feed2epub/library:/library
 
 services:

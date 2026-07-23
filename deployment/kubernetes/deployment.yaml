@@ -1,0 +1,97 @@
+# feed2epub as a single pod with two containers sharing the library volume -- the direct analogue of the
+# docker-compose stack (server + fetcher). Keeping both in one pod means they always co-locate on one node, so
+# the ReadWriteOnce library PVC is shared without any RWX/affinity gymnastics.
+#   - server:  the OPDS HTTP server; regenerates the catalog per request, so new EPUBs appear without restart.
+#   - fetcher: a shell sleep-loop around the one-shot fetch (the app has no internal scheduler by design).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feed2epub
+  namespace: feed2epub
+  labels:
+    app: feed2epub
+spec:
+  replicas: 1
+  # One RWO volume, one pod: never run two at once. Recreate avoids the Multi-Attach a RollingUpdate would hit.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: feed2epub
+  template:
+    metadata:
+      labels:
+        app: feed2epub
+    spec:
+      enableServiceLinks: false
+      # The image already runs as uid 1000; fsGroup lets that uid write the mounted block volume.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: server
+          image: ghcr.io/erikthorsell/feed2epub:latest   # pin a version in a real deployment
+          command: ["python", "-m", "feed2epub.serve", "--config", "/config/feeds.yaml", "--host", "0.0.0.0", "--port", "8080"]
+          env:
+            - name: TZ
+              value: Europe/Stockholm
+          # ${INSTAPAPER_FEED_URL} etc. -- omit if none of your feeds reference a secret (see secret.example.yaml).
+          envFrom:
+            - secretRef:
+                name: feed2epub-secret
+          ports:
+            - name: http
+              containerPort: 8080
+          livenessProbe:
+            httpGet: { path: /catalog.xml, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /catalog.xml, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: config
+              mountPath: /config/feeds.yaml
+              subPath: feeds.yaml
+              readOnly: true
+            - name: library
+              mountPath: /library
+              readOnly: true
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 256Mi }
+
+        - name: fetcher
+          image: ghcr.io/erikthorsell/feed2epub:latest   # keep in lockstep with the server image
+          command:
+            - /bin/sh
+            - -c
+            - 'while true; do python -m feed2epub --config /config/feeds.yaml || true; sleep "${FETCH_INTERVAL:-86400}"; done'
+          env:
+            - name: TZ
+              value: Europe/Stockholm
+            - name: FETCH_INTERVAL
+              value: "86400"
+          envFrom:
+            - secretRef:
+                name: feed2epub-secret
+          volumeMounts:
+            - name: config
+              mountPath: /config/feeds.yaml
+              subPath: feeds.yaml
+              readOnly: true
+            - name: library
+              mountPath: /library
+          resources:
+            requests: { cpu: 25m, memory: 128Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: config
+          configMap:
+            name: feed2epub-feeds
+        - name: library
+          persistentVolumeClaim:
+            claimName: feed2epub-library

@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: feed2epub
+
+resources:
+  - namespace.yaml
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+# The feed list becomes a ConfigMap mounted at /config/feeds.yaml. Copy the template first (this file is
+# gitignored -- it's your deployment config, not part of the app):
+#   cp ../../feeds.example.yaml feeds.yaml
+# The name-suffix hash means editing feeds.yaml rolls the pod so the new config is picked up.
+configMapGenerator:
+  - name: feed2epub-feeds
+    files:
+      - feeds.yaml
+
+# NOTE: secret.example.yaml is intentionally NOT listed above. Copy it to secret.yaml, fill it in, and add it
+# to `resources`, or manage the `feed2epub-secret` Secret out-of-band.
